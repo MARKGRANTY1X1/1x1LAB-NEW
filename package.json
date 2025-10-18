@@ -1,0 +1,1 @@
+{"name":"crypto-mining-desktop","version":"1.0.0","description":"Desktop wrapper for Crypto Mining web app","main":"main.js","scripts":{"start":"electron ."},"devDependencies":{"electron":"^28.2.3","electron-packager":"^17.1.1"}}
