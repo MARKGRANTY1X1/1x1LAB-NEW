@@ -44,7 +44,6 @@ jobs:
         run: npx electron-builder --win nsis --x64 --publish=never
 
       - name: Create tag for release (unique per run) and push
-        shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -54,6 +53,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag -a "$TAG" -m "Release $TAG (from run $GITHUB_RUN_ID)"
           git push origin "$TAG"
+        shell: bash
 
       - name: Create Release and upload artifacts
         uses: softprops/action-gh-release@v2
