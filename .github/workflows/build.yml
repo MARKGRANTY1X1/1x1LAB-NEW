@@ -12,8 +12,10 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      NODE_OPTIONS: --max_old_space_size=4096
     steps:
-      - name: Checkout (full history, allow pushing tags)
+      - name: Checkout (full history)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -24,43 +26,54 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install dependencies (use lockfile if present)
-        run: |
-          if (Test-Path package-lock.json) {
-            Write-Host "package-lock.json found — running npm ci"
-            npm ci
-          } else {
-            Write-Host "No package-lock.json — running npm install"
-            npm install --no-audit --no-fund
-          }
+      - name: Install dependencies
+        run: npm ci || npm install --no-audit --no-fund
 
-      - name: Run project build if present
-        run: npm run build --if-present
+      - name: Build web frontend
+        run: npm run build:web
 
       - name: Install electron-builder
         run: npm install --no-audit --no-fund --save-dev electron-builder
 
-      - name: Build Windows artifact with electron-builder (no auto-publish)
+      - name: Build Windows installer (no auto-publish)
         run: npx electron-builder --win nsis --x64 --publish=never
 
-      - name: Create and push tag for release (bash)
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create ZIP of build/dist output
+        shell: powershell
         run: |
-          set -e
+          if (Test-Path dist) {
+            $src = 'dist\*'
+            $zip = Join-Path $PWD 'dist\app.zip'
+            if (Test-Path $zip) { Remove-Item $zip }
+            Compress-Archive -Path $src -DestinationPath $zip
+            Write-Host "Created $zip"
+          } elseif (Test-Path build) {
+            $src = 'build\*'
+            $zip = Join-Path $PWD 'build\app.zip'
+            if (Test-Path $zip) { Remove-Item $zip }
+            Compress-Archive -Path $src -DestinationPath $zip
+            Write-Host "Created $zip"
+          } else {
+            Write-Host "No build or dist folder found"
+            exit 1
+          }
+
+      - name: Set TAG
+        shell: bash
+        run: |
           TAG="v1.0.0-${{ github.run_number }}"
-          echo "Creating tag $TAG"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "$TAG" -m "Release $TAG (from run $GITHUB_RUN_ID)"
-          git push origin "refs/tags/$TAG"
           echo "TAG=$TAG" >> $GITHUB_ENV
 
       - name: Create Release and upload artifacts
-        uses: softprops/action-gh-release@v2
+        uses: ncipollo/release-action@v1
         with:
-          tag_name: ${{ env.TAG }}
-          files: dist/**/*.{exe,msi,nsis,zip}
+          tag: ${{ env.TAG }}
+          name: ${{ env.TAG }}
+          body: Release from workflow run ${{ github.run_number }}
+          files: |
+            dist/**/*.{exe,msi,nsis,zip}
+            build/**/*.{exe,msi,nsis,zip}
+            dist/**/*
+            build/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
