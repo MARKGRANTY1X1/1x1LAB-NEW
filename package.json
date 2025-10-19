@@ -1,5 +1,4 @@
 name: Build Windows exe and release
-
 on:
   push:
     branches:
