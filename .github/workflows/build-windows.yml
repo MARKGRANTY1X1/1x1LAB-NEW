@@ -23,7 +23,8 @@ jobs:
         run: npm install --no-audit --no-fund
 
       - name: Build (if you have a frontend build step)
-        run: npm run build || echo "no build script"
+        # --if-present makes npm exit 0 if the script is missing
+        run: npm run build --if-present
 
       - name: Install electron-builder
         run: npm install --no-audit --no-fund --save-dev electron-builder
