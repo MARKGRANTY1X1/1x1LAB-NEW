@@ -1,1 +1,22 @@
-{"name":"crypto-mining-desktop","version":"1.0.0","description":"Desktop wrapper for Crypto Mining web app","main":"main.js","scripts":{"start":"electron ."},"devDependencies":{"electron":"^28.2.3","electron-packager":"^17.1.1"}}
+{
+  "name": "1x1lab",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^24.0.0"
+  },
+  "build": {
+    "appId": "com.markgranty1x1.1x1lab",
+    "files": [
+      "**/*"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    }
+  }
+}
