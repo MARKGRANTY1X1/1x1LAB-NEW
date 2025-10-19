@@ -1,7 +1,7 @@
 const { app, BrowserWindow } = require('electron')
 const path = require('path')
 
-const isDev = !!process.env.ELECTRON_START_URL || process.env.NODE_ENV === 'development'
+const isDev = (process.env.ELECTRON_START_URL && process.env.ELECTRON_START_URL.trim() !== '') || process.env.NODE_ENV === 'development'
 
 function createWindow () {
   const win = new BrowserWindow({
