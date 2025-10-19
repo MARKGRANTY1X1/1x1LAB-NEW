@@ -4,38 +4,29 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch: {}
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: windows-latest
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: 18
 
       - name: Install dependencies
-        # npm ci fails when no package-lock.json exists; use npm install here
-        run: npm install --no-audit --no-fund
-
-      - name: Build (if you have a frontend build step)
-        # --if-present makes npm exit 0 if the script is missing
-        run: npm run build --if-present
-
-      - name: Install electron-builder
-        run: npm install --no-audit --no-fund --save-dev electron-builder
+        run: npm ci
 
       - name: Build Windows artifact with electron-builder
-        run: npx electron-builder --win nsis --x64
-        # Produces artifacts under dist/ by default
+        run: npx electron-builder --win nsis --x64 --publish=never
 
-      - name: Create Release and upload artifacts
-        uses: softprops/action-gh-release@v1
+      - name: Upload built .exe to GitHub release
+        uses: softprops/action-gh-release@v2
         with:
-          files: dist/**/*.{exe,msi,nsis,zip}
+          files: dist/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
