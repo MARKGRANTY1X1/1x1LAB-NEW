@@ -6,32 +6,58 @@ on:
       - main
   workflow_dispatch: {}
 
+permissions:
+  contents: write
+
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
-      - name: Checkout
+      - name: Checkout (full history, allow pushing tags)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
 
-      - name: Install dependencies
-        run: npm ci || npm install
-
-      - name: Install pkg
-        run: npm install -g pkg
-
-      - name: Build exe (windows-x64)
+      - name: Install dependencies (use lockfile if present)
         run: |
-          mkdir -p release
-          pkg . --targets node18-win-x64 --output release/1x1lab.exe
+          if (Test-Path package-lock.json) {
+            Write-Host "package-lock.json found — running npm ci"
+            npm ci
+          } else {
+            Write-Host "No package-lock.json — running npm install"
+            npm install --no-audit --no-fund
+          }
 
-      - name: Create Release and upload exe
-        uses: softprops/action-gh-release@v1
+      - name: Run project build if present
+        run: npm run build --if-present
+
+      - name: Install electron-builder
+        run: npm install --no-audit --no-fund --save-dev electron-builder
+
+      - name: Build Windows artifact with electron-builder (no auto-publish)
+        run: npx electron-builder --win nsis --x64 --publish=never
+
+      - name: Create tag for release (unique per run) and push
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v1.0.0-${{ github.run_number }}"
+          echo "Creating tag $TAG"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Release $TAG (from run $GITHUB_RUN_ID)"
+          git push origin "$TAG"
+
+      - name: Create Release and upload artifacts
+        uses: softprops/action-gh-release@v2
         with:
-          files: release/1x1lab.exe
+          files: dist/**/*.{exe,msi,nsis,zip}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
