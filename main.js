@@ -1,48 +1,71 @@
-const { app, BrowserWindow, shell } = require('electron')
 const path = require('path')
+const fs = require('fs')
+const { app, BrowserWindow, shell } = require('electron')
 
-function createWindow () {
+function createWindow() {
   const win = new BrowserWindow({
-    width: 1200,
+    width: 1280,
     height: 800,
+    title: "1x1LAB",
+    icon: path.join(__dirname, "assets", "icon.ico"),
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      nodeIntegration: false,
       contextIsolation: true,
-      sandbox: true
+      nodeIntegration: false
     }
   })
 
-  // Load local UI instead of an external URL
-  win.removeMenu()
-  win.loadFile(path.join(__dirname, 'index.html'))
+  const startUrl = process.env.ELECTRON_START_URL
+  const indexPath = path.join(__dirname, 'dist', 'index.html') // change to 'build' if your frontend outputs build/
 
-  // Open external links in the user's default browser (deny inside-app navigation)
+  const loadLocal = () => {
+    if (fs.existsSync(indexPath)) {
+      win.loadFile(indexPath).catch(err => {
+        console.error('Failed to load local index.html:', err)
+        win.loadURL('data:text/html,<h1>App failed to load</h1><pre>' + encodeURIComponent(String(err)) + '</pre>')
+      })
+    } else {
+      console.error('index.html not found at', indexPath)
+      win.loadURL('data:text/html,<h1>index.html not found</h1><p>Expected: ' + indexPath + '</p>')
+    }
+  }
+
+  if (startUrl) {
+    console.log('ELECTRON_START_URL set — attempting to load', startUrl)
+    win.loadURL(startUrl).then(() => {
+      console.log('Loaded startUrl')
+    }).catch(err => {
+      console.warn('Failed to load startUrl — falling back to local build:', err)
+      loadLocal()
+    })
+
+    win.webContents.on('did-fail-load', (e, errorCode, errorDesc, validatedURL, isMainFrame) => {
+      if (isMainFrame) {
+        console.warn('did-fail-load:', errorCode, errorDesc, validatedURL)
+        loadLocal()
+      }
+    })
+
+    win.webContents.openDevTools()
+  } else {
+    console.log('No ELECTRON_START_URL — loading local file:', indexPath)
+    loadLocal()
+  }
+
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('file://')) return { action: 'allow' }
     shell.openExternal(url)
     return { action: 'deny' }
   })
 
-  win.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith('file://')) {
-      event.preventDefault()
-      shell.openExternal(url)
-    }
-  })
+  win.setMenuBarVisibility(false)
 }
 
 app.whenReady().then(() => {
-  if (process.platform === 'win32') {
-    app.setAppUserModelId('com.markgranty1x1.1x1lab')
-  }
   createWindow()
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+  })
 })
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
-})
-
-app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) createWindow()
 })
