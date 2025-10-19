@@ -1,1 +1,31 @@
-{"name":"crypto-mining-desktop","version":"1.0.0","description":"Desktop wrapper for Crypto Mining web app","main":"main.js","scripts":{"start":"electron ."},"devDependencies":{"electron":"^28.2.3","electron-packager":"^17.1.1"}}
+{
+  "name": "crypto-mining-desktop",
+  "version": "1.0.0",
+  "description": "Desktop wrapper for Crypto Mining web app",
+  "productName": "Crypto Mining Desktop",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build-web": "echo 'Build your web app to ./build directory'",
+    "build": "npm run build-web",
+    "dist": "electron-builder --win --x64"
+  },
+  "build": {
+    "appId": "com.cryptomining.desktop",
+    "files": [
+      "main.js",
+      "preload.js",
+      "build/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "artifactName": "${productName}-${version}-Setup.${ext}"
+    }
+  },
+  "devDependencies": {
+    "electron": "^28.2.3",
+    "electron-builder": "^24.13.3",
+    "electron-packager": "^17.1.1"
+  }
+}
